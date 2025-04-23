@@ -10,6 +10,7 @@ Predicting Airbnb prices in San Francisco using regression models in Scikit-lear
 - Pandas
 - Scikit-learn
 - Python
+- Jupyter Notebook
 
 # How to run:
 - Clone the repository
