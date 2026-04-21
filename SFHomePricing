@@ -8,7 +8,7 @@ from sklearn.model_selection import GridSearchCV
 from xgboost import XGBRegressor
 
 # loading data, removing missing values, and cleaning it to convert from e.g. $100 to 100
-SF_listings_file = '/Users/alihanisar/Desktop/ML Projects/SF-Airbnb-Price-Prediction/listingsSF.csv'
+SF_listings_file = 'listingsSF.csv'
 SFlistingsdata = pd.read_csv(SF_listings_file)
 SFlistingsdata = SFlistingsdata [["neighbourhood","latitude","longitude","room_type","price","minimum_nights","reviews_per_month", "number_of_reviews", "availability_365"]]    
 SFlistingsdata = SFlistingsdata.dropna()
