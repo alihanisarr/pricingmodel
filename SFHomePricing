@@ -1,0 +1,96 @@
+import pandas as pd
+from sklearn.tree import DecisionTreeRegressor
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import mean_absolute_error
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import r2_score
+from sklearn.model_selection import GridSearchCV
+from xgboost import XGBRegressor
+
+# loading data, removing missing values, and cleaning it to convert from e.g. $100 to 100
+SF_listings_file = '/Users/alihanisar/Desktop/ML Projects/SF-Airbnb-Price-Prediction/listingsSF.csv'
+SFlistingsdata = pd.read_csv(SF_listings_file)
+SFlistingsdata = SFlistingsdata [["neighbourhood","latitude","longitude","room_type","price","minimum_nights","reviews_per_month", "number_of_reviews", "availability_365"]]    
+SFlistingsdata = SFlistingsdata.dropna()
+SFlistingsdata["price"] = SFlistingsdata["price"].replace(r'[\$,]', '', regex=True).astype(float)
+
+# Confirming the presence of outliers (e.g. luxury listings with prices above $500 or $1000)
+print("Before removing outliers:")
+print(SFlistingsdata["price"].describe())
+print("Listings over $500:", (SFlistingsdata["price"] > 500).sum())
+print("Listings over $1000:", (SFlistingsdata["price"] > 1000).sum())
+
+# Removing outliers 
+SFlistingsdata = SFlistingsdata[SFlistingsdata["price"] < 500]
+
+# Showing data after removing outliers
+print("\n After removing outliers:")
+print(SFlistingsdata["price"].describe())
+print("Listings over $500:", (SFlistingsdata["price"] > 500).sum())
+print("Listings over $1000:", (SFlistingsdata["price"] > 1000).sum())
+
+# target variable and features
+y = SFlistingsdata.price
+
+SFlistings_featurescategories = ["neighbourhood","room_type"]
+SFlistings_featuresnumerical = ["latitude","longitude","minimum_nights","reviews_per_month","number_of_reviews", "availability_365"] 
+
+X_categories = pd.get_dummies(SFlistingsdata[SFlistings_featurescategories])
+X_numerical = SFlistingsdata[SFlistings_featuresnumerical]
+
+X = pd.concat([X_categories, X_numerical], axis=1)
+
+# train test split
+train_X, val_X, train_y, val_y = train_test_split( X , y , random_state=0 )
+
+# GridSearchCV for Decision Tree
+param_grid_dt = {
+    "max_depth": [5, 7, 10, 12, 15]
+}
+grid_search_dt = GridSearchCV(DecisionTreeRegressor(random_state=1), param_grid_dt, cv=5, scoring="r2")
+grid_search_dt.fit(train_X, train_y)
+SFmodelpredictions = grid_search_dt.best_estimator_.predict(val_X)
+print("\n Decision Tree Best Parameters:", grid_search_dt.best_params_)
+      
+
+mae = mean_absolute_error(val_y, SFmodelpredictions)
+
+# GridSearchCV for Random Forest
+param_grid_rf = {
+    "max_depth": [10, 15, 20],
+    "max_features": [10, 15, 20],
+    "n_estimators": [100, 200]
+}
+grid_search_rf = GridSearchCV(RandomForestRegressor(random_state=1), param_grid=param_grid_rf, cv=5, scoring="r2")
+grid_search_rf.fit(train_X, train_y)
+SFmodelpredictionsRF = grid_search_rf.best_estimator_.predict(val_X)
+print("\n Random Forest Best Parameters:", grid_search_rf.best_params_)
+
+mae_RF = mean_absolute_error(val_y, SFmodelpredictionsRF)
+
+# GridSearchCV for XGBoost
+search_space = {
+    'n_estimators': [100, 200, 300],
+    'max_depth': [3, 5, 7],
+    'learning_rate': [0.01, 0.05, 0.1, 1],
+    'gamma': [0, 1, 5]
+}
+
+grid_search_xgb = GridSearchCV(XGBRegressor(random_state=1), param_grid=search_space, cv=5, scoring='r2')
+grid_search_xgb.fit(train_X, train_y)
+SFmodelpredictionsXGB = grid_search_xgb.best_estimator_.predict(val_X)
+print("\n XGBoost Regressor Best Parameters:", grid_search_xgb.best_params_)
+
+mae_XGB = mean_absolute_error(val_y, SFmodelpredictionsXGB)
+
+results = pd.DataFrame({
+    "Model": ["Decision Tree", "Random Forest", "XGBoost"],
+    "MAE": [mae, mae_RF, mae_XGB],
+    "R2 Score": [r2_score(val_y, SFmodelpredictions), r2_score(val_y, SFmodelpredictionsRF), r2_score(val_y, SFmodelpredictionsXGB)]
+})  
+
+print("\n Model performance comparison:")
+print(results)
+
+
+
